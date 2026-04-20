@@ -4,7 +4,7 @@
 
 **Built for PromptWars Virtual Challenge 1 — Google Antigravity × Hack2skill**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Cloud%20Run-blue?style=for-the-badge&logo=googlecloud)](YOUR_CLOUD_RUN_URL)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-blue?style=for-the-badge&logo=render)](https://arena-iq.onrender.com)
 
 ---
 
