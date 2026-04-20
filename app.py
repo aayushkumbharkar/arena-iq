@@ -1,6 +1,9 @@
 import os
 import json
+from dotenv import load_dotenv
 import google.generativeai as genai
+
+load_dotenv()  # loads .env file locally (ignored by git)
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
