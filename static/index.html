@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArenaIQ — Smart Venue Assistant</title>
+  <meta name="description" content="ArenaIQ: AI-powered smart venue assistant for large-scale sporting events. Real-time crowd flow, wait times, navigation, and coordination powered by Google Gemini." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #080c14;
+      --bg-secondary: #0d1424;
+      --bg-card: #111827;
+      --bg-card-hover: #1a2436;
+      --border: rgba(99, 155, 255, 0.12);
+      --border-bright: rgba(99, 155, 255, 0.3);
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #8b5cf6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --text-primary: #f0f6ff;
+      --text-secondary: #94a3b8;
+      --text-muted: #475569;
+      --glow-blue: rgba(59, 130, 246, 0.15);
+      --glow-cyan: rgba(6, 182, 212, 0.1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(59,130,246,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 90%, rgba(139,92,246,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 30% at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(8,12,20,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 0 20px rgba(59,130,246,0.4);
+    }
+
+    .logo-text span { color: var(--accent-cyan); }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fca5a5;
+      letter-spacing: 0.5px;
+    }
+
+    .live-dot {
+      width: 6px; height: 6px;
+      background: var(--accent-red);
+      border-radius: 50%;
+      animation: pulse-red 1.5s infinite;
+    }
+
+    @keyframes pulse-red {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .venue-name {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ── Main layout ── */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 340px 1fr 320px;
+      grid-template-rows: calc(100vh - 64px);
+      gap: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Left Sidebar ── */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-secondary);
+    }
+
+    .sidebar-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Venue Map ── */
+    .venue-map {
+      position: relative;
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .venue-map::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        90deg, rgba(59,130,246,0.03) 0px, rgba(59,130,246,0.03) 1px, transparent 1px, transparent 30px
+      ),
+      repeating-linear-gradient(
+        0deg, rgba(59,130,246,0.03) 0px, rgba(59,130,246,0.03) 1px, transparent 1px, transparent 30px
+      );
+    }
+
+    .map-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .stadium-svg {
+      width: 100%;
+      height: 160px;
+    }
+
+    /* ── Section Cards ── */
+    .sections-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section-card:hover {
+      border-color: var(--border-bright);
+      background: var(--bg-card-hover);
+      transform: translateY(-1px);
+    }
+
+    .section-card.high { border-left: 3px solid var(--accent-red); }
+    .section-card.medium { border-left: 3px solid var(--accent-amber); }
+    .section-card.low { border-left: 3px solid var(--accent-green); }
+
+    .section-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .section-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin: 2px 0 6px;
+    }
+
+    .crowd-bar-bg {
+      height: 4px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .crowd-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 1s ease;
+    }
+
+    .crowd-bar.high { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .crowd-bar.medium { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+    .crowd-bar.low { background: linear-gradient(90deg, #10b981, #34d399); }
+
+    .section-stats {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .stat-mini {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .stat-mini strong { color: var(--text-secondary); }
+
+    /* ── Alerts strip ── */
+    .alerts-strip {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .alert-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      line-height: 1.4;
+      border: 1px solid;
+    }
+
+    .alert-item.high {
+      background: rgba(239,68,68,0.08);
+      border-color: rgba(239,68,68,0.25);
+      color: #fca5a5;
+    }
+
+    .alert-item.medium {
+      background: rgba(245,158,11,0.08);
+      border-color: rgba(245,158,11,0.25);
+      color: #fcd34d;
+    }
+
+    .alert-item.low {
+      background: rgba(16,185,129,0.08);
+      border-color: rgba(16,185,129,0.25);
+      color: #6ee7b7;
+    }
+
+    .alert-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Schedule ── */
+    .schedule-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .schedule-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      transition: background 0.2s;
+    }
+
+    .schedule-item:hover { background: rgba(255,255,255,0.04); }
+    .schedule-item.live { background: rgba(59,130,246,0.1); }
+
+    .schedule-time {
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 40px;
+      font-size: 0.72rem;
+    }
+
+    .schedule-event { flex: 1; color: var(--text-primary); }
+    .schedule-item.completed .schedule-event { color: var(--text-muted); }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot.live {
+      background: var(--accent-blue);
+      box-shadow: 0 0 6px var(--accent-blue);
+      animation: pulse-blue 1.5s infinite;
+    }
+
+    @keyframes pulse-blue {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--accent-blue); }
+      50% { opacity: 0.6; box-shadow: 0 0 12px var(--accent-blue); }
+    }
+
+    .status-dot.completed { background: var(--text-muted); }
+    .status-dot.upcoming { background: var(--border-bright); }
+
+    /* ── Center Chat ── */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-primary);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13,20,36,0.5);
+    }
+
+    .chat-hero {
+      text-align: center;
+    }
+
+    .chat-hero-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 4px;
+    }
+
+    .chat-hero-sub {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    /* ── Quick prompts ── */
+    .quick-prompts {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13,20,36,0.3);
+    }
+
+    .quick-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .quick-btn:hover {
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+      background: rgba(59,130,246,0.08);
+      transform: translateY(-1px);
+    }
+
+    /* ── Messages ── */
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message {
+      display: flex;
+      gap: 12px;
+      animation: slide-up 0.3s ease;
+    }
+
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .avatar.ai {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      box-shadow: 0 0 12px rgba(59,130,246,0.3);
+    }
+
+    .avatar.user {
+      background: linear-gradient(135deg, var(--accent-purple), #a78bfa);
+      box-shadow: 0 0 12px rgba(139,92,246,0.3);
+    }
+
+    .message-bubble {
+      max-width: 75%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    .message.ai .message-bubble {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top-left-radius: 4px;
+      color: var(--text-primary);
+    }
+
+    .message.user .message-bubble {
+      background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+      border-top-right-radius: 4px;
+      color: white;
+    }
+
+    .message-bubble strong { font-weight: 600; }
+    .message-bubble br { margin-bottom: 4px; }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      border-top-left-radius: 4px;
+      width: fit-content;
+    }
+
+    .typing-dot {
+      width: 6px; height: 6px;
+      background: var(--accent-blue);
+      border-radius: 50%;
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* ── Chat Input ── */
+    .chat-input-area {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: rgba(13,20,36,0.5);
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 4px 6px 4px 16px;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    }
+
+    #chat-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      font-family: inherit;
+      padding: 10px 0;
+      resize: none;
+      min-height: 20px;
+      max-height: 100px;
+    }
+
+    #chat-input::placeholder { color: var(--text-muted); }
+
+    .send-btn {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover { transform: scale(1.05); box-shadow: 0 0 12px rgba(59,130,246,0.4); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    #powered-by {
+      text-align: center;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    /* ── Right Panel ── */
+    .right-panel {
+      border-left: 1px solid var(--border);
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .panel-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Gate Status ── */
+    .gate-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .gate-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+
+    .gate-item:hover { border-color: var(--border-bright); }
+
+    .gate-info { flex: 1; }
+    .gate-name { font-size: 0.82rem; font-weight: 600; }
+    .gate-queue { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+
+    .gate-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 10px;
+      letter-spacing: 0.3px;
+    }
+
+    .gate-badge.open { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+    .gate-badge.closed { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+    .gate-time {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-left: 10px;
+      text-align: right;
+      min-width: 45px;
+    }
+
+    /* ── Food Court ── */
+    .food-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .food-item {
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .food-item:hover {
+      border-color: var(--border-bright);
+      background: var(--bg-card-hover);
+    }
+
+    .food-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .food-name { font-size: 0.82rem; font-weight: 600; }
+
+    .food-wait {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 8px;
+    }
+
+    .food-wait.fast { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .food-wait.medium { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .food-wait.slow { background: rgba(239,68,68,0.15); color: #fca5a5; }
+
+    .food-items-list {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ── Stats Row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: 'Space Grotesk', sans-serif;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 2px;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Crowd tracker ── */
+    .crowd-donut-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .crowd-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .crowd-section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      min-width: 24px;
+      color: var(--text-secondary);
+    }
+
+    .crowd-track {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .crowd-fill {
+      height: 100%;
+      border-radius: 4px;
+      position: relative;
+      transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .crowd-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 3px; height: 100%;
+      background: rgba(255,255,255,0.6);
+      border-radius: 2px;
+    }
+
+    .crowd-pct {
+      font-size: 0.7rem;
+      font-weight: 700;
+      min-width: 30px;
+      text-align: right;
+      color: var(--text-secondary);
+    }
+
+    /* ── Welcome card ── */
+    .welcome-msg {
+      background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(6,182,212,0.06));
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .welcome-emoji { font-size: 2rem; margin-bottom: 8px; }
+    .welcome-title { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .welcome-sub { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; }
+
+    /* Responsive */
+    @media (max-width: 1100px) {
+      .app-shell {
+        grid-template-columns: 280px 1fr 260px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        height: auto;
+        min-height: calc(100vh - 64px);
+      }
+      .sidebar, .right-panel {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏟️</div>
+    <div class="logo-text">Arena<span>IQ</span></div>
+  </div>
+  <div class="header-status">
+    <span class="venue-name">MetroPlex Stadium · Section Maps Live</span>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      LIVE
+    </div>
+  </div>
+</header>
+
+<!-- ── APP SHELL ── -->
+<div class="app-shell">
+
+  <!-- ── LEFT SIDEBAR ── -->
+  <aside class="sidebar">
+    <!-- Venue Map -->
+    <div class="sidebar-section">
+      <div class="section-title">Stadium Overview</div>
+      <div class="venue-map">
+        <div class="map-title">🗺️ Crowd Density Map</div>
+        <svg class="stadium-svg" viewBox="0 0 300 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Outer oval -->
+          <ellipse cx="150" cy="80" rx="140" ry="70" stroke="rgba(99,155,255,0.2)" stroke-width="1.5" fill="rgba(8,12,20,0.5)" stroke-dasharray="4 2"/>
+          <!-- Field -->
+          <ellipse cx="150" cy="80" rx="70" ry="38" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.2)" stroke-width="1"/>
+          <ellipse cx="150" cy="80" rx="70" ry="38" fill="none" stroke="rgba(16,185,129,0.12)" stroke-width="8"/>
+          <!-- Center circle -->
+          <circle cx="150" cy="80" r="12" fill="none" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+          <circle cx="150" cy="80" r="3" fill="rgba(16,185,129,0.5)"/>
+
+          <!-- Section A - Top (HIGH) -->
+          <path d="M80 18 Q150 5 220 18 Q195 38 150 42 Q105 38 80 18Z" fill="rgba(239,68,68,0.25)" stroke="rgba(239,68,68,0.5)" stroke-width="1"/>
+          <text x="150" y="28" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="700" font-family="Inter">A</text>
+          <text x="150" y="38" text-anchor="middle" fill="#fca5a5" font-size="7">85%</text>
+
+          <!-- Section B - Right (MEDIUM) -->
+          <path d="M243 40 Q280 60 280 80 Q280 100 243 120 Q228 100 224 80 Q228 60 243 40Z" fill="rgba(245,158,11,0.2)" stroke="rgba(245,158,11,0.4)" stroke-width="1"/>
+          <text x="255" y="83" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="700" font-family="Inter">B</text>
+          <text x="255" y="93" text-anchor="middle" fill="#fcd34d" font-size="7">45%</text>
+
+          <!-- Section C - Bottom (CRITICAL) -->
+          <path d="M220 142 Q150 155 80 142 Q105 122 150 118 Q195 122 220 142Z" fill="rgba(239,68,68,0.35)" stroke="rgba(239,68,68,0.6)" stroke-width="1"/>
+          <text x="150" y="134" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="700" font-family="Inter">C</text>
+          <text x="150" y="143" text-anchor="middle" fill="#fca5a5" font-size="7">92%</text>
+
+          <!-- Section D - Left (LOW) -->
+          <path d="M57 40 Q20 60 20 80 Q20 100 57 120 Q72 100 76 80 Q72 60 57 40Z" fill="rgba(16,185,129,0.2)" stroke="rgba(16,185,129,0.5)" stroke-width="1"/>
+          <text x="43" y="83" text-anchor="middle" fill="#6ee7b7" font-size="11" font-weight="700" font-family="Inter">D</text>
+          <text x="43" y="93" text-anchor="middle" fill="#6ee7b7" font-size="7">30%</text>
+
+          <!-- Labels -->
+          <text x="150" y="10" text-anchor="middle" fill="rgba(148,163,184,0.6)" font-size="7">NORTH</text>
+          <text x="150" y="158" text-anchor="middle" fill="rgba(148,163,184,0.6)" font-size="7">SOUTH</text>
+          <text x="293" y="83" text-anchor="middle" fill="rgba(148,163,184,0.6)" font-size="7">E</text>
+          <text x="7" y="83" text-anchor="middle" fill="rgba(148,163,184,0.6)" font-size="7">W</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Section crowd bars -->
+    <div class="sidebar-section" style="flex:0">
+      <div class="section-title">Live Section Density</div>
+      <div class="crowd-donut-container" id="section-density">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="sidebar-section" style="flex:1; overflow-y:auto;">
+      <div class="section-title">🚨 Live Alerts</div>
+      <div class="alerts-strip" id="alerts-strip">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="sidebar-section" style="flex:0">
+      <div class="section-title">📅 Event Timeline</div>
+      <div class="schedule-list" id="schedule-list">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── CENTER CHAT ── -->
+  <main class="chat-area">
+    <div class="chat-header">
+      <div class="chat-hero">
+        <div class="chat-hero-title">🏟️ Your AI Venue Assistant</div>
+        <div class="chat-hero-sub">Powered by Google Gemini · Real-time crowd intelligence · Instant answers</div>
+      </div>
+    </div>
+
+    <!-- Quick prompts -->
+    <div class="quick-prompts">
+      <button class="quick-btn" onclick="sendQuick('Where is the least crowded section right now?')">📊 Crowd Status</button>
+      <button class="quick-btn" onclick="sendQuick('What food options have the shortest wait time?')">🍔 Food & Drinks</button>
+      <button class="quick-btn" onclick="sendQuick('Which gate should I use for fastest entry?')">🚪 Gate Entry</button>
+      <button class="quick-btn" onclick="sendQuick('Where is the nearest restroom with short wait?')">🚻 Restrooms</button>
+      <button class="quick-btn" onclick="sendQuick('What is happening now and what is next on the schedule?')">📅 Schedule</button>
+      <button class="quick-btn" onclick="sendQuick('Give me tips for the best experience today!')">💡 Pro Tips</button>
+    </div>
+
+    <!-- Messages -->
+    <div class="messages-container" id="messages">
+      <!-- Welcome message -->
+      <div class="message ai" id="welcome-message">
+        <div class="avatar ai">🤖</div>
+        <div class="message-bubble">
+          <strong>Welcome to ArenaIQ! 👋</strong><br><br>
+          I'm your real-time venue intelligence assistant, powered by Google Gemini. I have live data on crowd levels, wait times, gate status, and event schedules for MetroPlex Stadium.<br><br>
+          🔴 <strong>Section C</strong> is at 92% — quite packed right now<br>
+          🟢 <strong>Section D</strong> is at 30% — most space available<br>
+          🚪 <strong>South Gate</strong> has the shortest queue (2 min)<br>
+          🍔 <strong>Food Court Gamma</strong> has only a 2-min wait!<br><br>
+          What can I help you with today? Use the quick buttons above or ask me anything!
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="chat-input-area">
+      <div class="input-wrapper">
+        <textarea id="chat-input" placeholder="Ask about crowds, wait times, directions, food..." rows="1"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send message">➤</button>
+      </div>
+      <div id="powered-by">Powered by Google Gemini 2.0 Flash · ArenaIQ v1.0</div>
+    </div>
+  </main>
+
+  <!-- ── RIGHT PANEL ── -->
+  <aside class="right-panel">
+    <!-- Overall Stats -->
+    <div class="panel-section">
+      <div class="section-title">📊 Venue Overview</div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-number">8,400</div>
+          <div class="stat-label">Total Capacity</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="total-attendance">—</div>
+          <div class="stat-label">Attending Now</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="avg-wait">—</div>
+          <div class="stat-label">Avg Wait (min)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="open-gates">—</div>
+          <div class="stat-label">Gates Open</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gate Status -->
+    <div class="panel-section">
+      <div class="section-title">🚪 Gate Status</div>
+      <div class="gate-list" id="gate-list">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Food Courts -->
+    <div class="panel-section">
+      <div class="section-title">🍔 Food & Drinks</div>
+      <div class="food-list" id="food-list">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- AI Recommendation -->
+    <div class="panel-section">
+      <div class="section-title">💡 Smart Recommendation</div>
+      <div class="welcome-msg">
+        <div class="welcome-emoji">🌟</div>
+        <div class="welcome-title">Best Move Right Now</div>
+        <div class="welcome-sub" id="ai-rec">
+          Head to <strong>Food Court Gamma</strong> (Section D) for the quickest food (2 min wait), then settle into Section D or B for extra legroom and a great view. Avoid Section C — it's packed!
+        </div>
+      </div>
+    </div>
+  </aside>
+</div><!-- end app-shell -->
+
+<script>
+  // ─── Venue Data ───────────────────────────────────────────────
+  const venueData = {
+    sections: {
+      A: { crowd_level: 85, wait_time_food: 12, wait_time_restroom: 8, capacity: 500, current: 425 },
+      B: { crowd_level: 45, wait_time_food: 4,  wait_time_restroom: 3, capacity: 500, current: 225 },
+      C: { crowd_level: 92, wait_time_food: 18, wait_time_restroom: 14, capacity: 500, current: 460 },
+      D: { crowd_level: 30, wait_time_food: 2,  wait_time_restroom: 2, capacity: 500, current: 150 },
+      E: { crowd_level: 67, wait_time_food: 9,  wait_time_restroom: 7, capacity: 500, current: 335 },
+    },
+    gates: {
+      'North Gate': { status: 'open', queue_length: 120, estimated_entry_time: 6 },
+      'South Gate': { status: 'open', queue_length: 45, estimated_entry_time: 2 },
+      'East Gate':  { status: 'open', queue_length: 230, estimated_entry_time: 11 },
+      'West Gate':  { status: 'closed', queue_length: 0, estimated_entry_time: 0 },
+    },
+    amenities: {
+      'Food Court Alpha': { section: 'A', wait_time: 12, items: ['Burgers', 'Hot Dogs', 'Nachos'] },
+      'Food Court Beta':  { section: 'B', wait_time: 4,  items: ['Pizza', 'Sandwiches', 'Fries'] },
+      'Food Court Gamma': { section: 'D', wait_time: 2,  items: ['Sushi', 'Salads', 'Wraps'] },
+      'Snack Bar 1':      { section: 'C', wait_time: 7,  items: ['Popcorn', 'Drinks', 'Candy'] },
+      'Snack Bar 2':      { section: 'E', wait_time: 5,  items: ['Ice Cream', 'Pretzels', 'Drinks'] },
+    },
+    alerts: [
+      { type: 'crowd', message: 'Section C is at 92% capacity. Consider moving to Section D for more space.', severity: 'high' },
+      { type: 'traffic', message: 'East Gate has a long queue. South Gate recommended for faster entry.', severity: 'medium' },
+      { type: 'food', message: 'Food Court Gamma in Section D has only 2 min wait — great time to grab food!', severity: 'low' },
+    ],
+    events: [
+      { time: '19:00', event: 'Gates Open', status: 'completed' },
+      { time: '19:30', event: 'Pre-show Entertainment', status: 'completed' },
+      { time: '20:00', event: 'Opening Ceremony', status: 'live' },
+      { time: '20:30', event: 'Main Event – Quarter 1', status: 'upcoming' },
+      { time: '21:15', event: 'Halftime Show', status: 'upcoming' },
+      { time: '22:00', event: 'Main Event – Quarter 2', status: 'upcoming' },
+      { time: '23:00', event: 'Closing Ceremony', status: 'upcoming' },
+    ]
+  };
+
+  // ─── Render Sidebar ───────────────────────────────────────────
+  function getCrowdClass(level) {
+    if (level >= 80) return 'high';
+    if (level >= 55) return 'medium';
+    return 'low';
+  }
+
+  function getCrowdColor(level) {
+    if (level >= 80) return '#ef4444';
+    if (level >= 55) return '#f59e0b';
+    return '#10b981';
+  }
+
+  function renderSectionDensity() {
+    const container = document.getElementById('section-density');
+    const sections = venueData.sections;
+    container.innerHTML = Object.entries(sections).map(([key, sec]) => `
+      <div class="crowd-row">
+        <div class="crowd-section-label">${key}</div>
+        <div class="crowd-track">
+          <div class="crowd-fill" style="width:${sec.crowd_level}%; background: linear-gradient(90deg, ${getCrowdColor(sec.crowd_level)}88, ${getCrowdColor(sec.crowd_level)});"></div>
+        </div>
+        <div class="crowd-pct" style="color:${getCrowdColor(sec.crowd_level)}">${sec.crowd_level}%</div>
+      </div>
+    `).join('');
+  }
+
+  function renderAlerts() {
+    const container = document.getElementById('alerts-strip');
+    const icons = { high: '🚨', medium: '⚠️', low: '✅' };
+    container.innerHTML = venueData.alerts.map(a => `
+      <div class="alert-item ${a.severity}">
+        <span class="alert-icon">${icons[a.severity]}</span>
+        <span>${a.message}</span>
+      </div>
+    `).join('');
+  }
+
+  function renderSchedule() {
+    const container = document.getElementById('schedule-list');
+    container.innerHTML = venueData.events.map(e => `
+      <div class="schedule-item ${e.status}">
+        <div class="status-dot ${e.status}"></div>
+        <div class="schedule-time">${e.time}</div>
+        <div class="schedule-event">${e.event}</div>
+        ${e.status === 'live' ? '<span style="font-size:0.65rem;color:#60a5fa;font-weight:700;">LIVE</span>' : ''}
+      </div>
+    `).join('');
+  }
+
+  function renderGates() {
+    const container = document.getElementById('gate-list');
+    container.innerHTML = Object.entries(venueData.gates).map(([name, g]) => `
+      <div class="gate-item">
+        <div class="gate-info">
+          <div class="gate-name">${name}</div>
+          <div class="gate-queue">${g.status === 'open' ? `${g.queue_length} in queue` : 'Closed'}</div>
+        </div>
+        <span class="gate-badge ${g.status}">${g.status.toUpperCase()}</span>
+        ${g.status === 'open' ? `<div class="gate-time">~${g.estimated_entry_time} min</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function renderFood() {
+    const container = document.getElementById('food-list');
+    container.innerHTML = Object.entries(venueData.amenities).map(([name, f]) => {
+      const waitClass = f.wait_time <= 4 ? 'fast' : f.wait_time <= 8 ? 'medium' : 'slow';
+      return `
+        <div class="food-item" onclick="sendQuick('Tell me more about ${name} in Section ${f.section}')">
+          <div class="food-header">
+            <div class="food-name">${name}</div>
+            <div class="food-wait ${waitClass}">${f.wait_time} min</div>
+          </div>
+          <div class="food-items-list">Section ${f.section} · ${f.items.join(', ')}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderStats() {
+    const total = Object.values(venueData.sections).reduce((s, v) => s + v.current, 0);
+    const avgWait = Math.round(Object.values(venueData.sections).reduce((s, v) => s + v.wait_time_food, 0) / 5);
+    const openGates = Object.values(venueData.gates).filter(g => g.status === 'open').length;
+    document.getElementById('total-attendance').textContent = total.toLocaleString();
+    document.getElementById('avg-wait').textContent = avgWait;
+    document.getElementById('open-gates').textContent = openGates;
+  }
+
+  // ─── Chat ─────────────────────────────────────────────────────
+  let chatHistory = [];
+
+  function renderMarkdown(text) {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function addMessage(role, content) {
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = `avatar ${role}`;
+    avatar.textContent = role === 'ai' ? '🤖' : '👤';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble';
+    bubble.innerHTML = renderMarkdown(content);
+
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div;
+  }
+
+  function showTyping() {
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'message ai';
+    div.id = 'typing-indicator';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar ai';
+    avatar.textContent = '🤖';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'typing-indicator';
+    bubble.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    document.getElementById('send-btn').disabled = true;
+
+    addMessage('user', msg);
+    chatHistory.push({ role: 'user', content: msg });
+    showTyping();
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, history: chatHistory.slice(-10) })
+      });
+      const data = await res.json();
+      removeTyping();
+      const reply = data.response || "Sorry, I couldn't get a response. Please try again.";
+      addMessage('ai', reply);
+      chatHistory.push({ role: 'model', content: reply });
+    } catch (err) {
+      removeTyping();
+      addMessage('ai', "⚠️ Connection issue. Please check your network and try again.");
+    }
+
+    document.getElementById('send-btn').disabled = false;
+    input.focus();
+  }
+
+  function sendQuick(msg) {
+    document.getElementById('chat-input').value = msg;
+    sendMessage();
+  }
+
+  // Enter key handler
+  document.getElementById('chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Auto-resize textarea
+  document.getElementById('chat-input').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+  });
+
+  // ─── Simulate live updates ─────────────────────────────────────
+  function simulateLiveData() {
+    // Small random fluctuations to make it feel live
+    Object.keys(venueData.sections).forEach(key => {
+      const sec = venueData.sections[key];
+      sec.crowd_level = Math.max(5, Math.min(99, sec.crowd_level + (Math.random() - 0.5) * 3));
+      sec.current = Math.round(sec.capacity * sec.crowd_level / 100);
+    });
+    renderSectionDensity();
+    renderStats();
+  }
+
+  // ─── Init ─────────────────────────────────────────────────────
+  renderSectionDensity();
+  renderAlerts();
+  renderSchedule();
+  renderGates();
+  renderFood();
+  renderStats();
+
+  // Live data simulation every 8 seconds
+  setInterval(simulateLiveData, 8000);
+</script>
+</body>
+</html>
