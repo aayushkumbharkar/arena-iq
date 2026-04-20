@@ -1,14 +1,27 @@
 import os
 import json
+import logging
+from typing import Dict, Any, List
 from dotenv import load_dotenv
 import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 load_dotenv()  # loads .env file locally (ignored by git)
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
+from flask_talisman import Talisman
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='static')
-CORS(app)
+# Restrict CORS in production, but allow for testing
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# Add security headers, but allow inline scripts/styles for our single-page app
+# Disable force_https so local tests don't redirect (Render handles HTTPS organically)
+Talisman(app, content_security_policy=None, force_https=False)
 
 # Configure Gemini
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -70,30 +83,52 @@ If asked about something not venue-related, politely redirect to venue assistanc
 
 
 @app.route('/')
-def index():
+def index() -> Response:
+    """Serve the main frontend application."""
+    logger.info("Serving index.html")
     return send_from_directory('static', 'index.html')
 
 
 @app.route('/api/chat', methods=['POST'])
-def chat():
-    data = request.get_json()
-    user_message = data.get('message', '')
-    history = data.get('history', [])
+def chat() -> tuple[Response, int] | Response:
+    """
+    Handle chat requests from the frontend, process through Gemini AI,
+    and return the AI response along with current venue state.
+    """
+    data: Dict[str, Any] = request.get_json() or {}
+    user_message: str = data.get('message', '').strip()
+    history: List[Dict[str, str]] = data.get('history', [])
     
     if not user_message:
+        logger.warning("Empty message received")
         return jsonify({'error': 'No message provided'}), 400
     
     if not GEMINI_API_KEY:
-        # Demo mode with smart fallback responses
+        logger.info("Demo mode: No API key found")
         return jsonify({
             'response': get_demo_response(user_message),
             'venue_data': VENUE_DATA
         })
     
     try:
+        # AI Optimization: Add safety settings and generation config
+        safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        }
+        
+        generation_config = genai.types.GenerationConfig(
+            temperature=0.7,
+            max_output_tokens=500,
+        )
+
         model = genai.GenerativeModel(
             model_name='gemini-2.0-flash',
-            system_instruction=SYSTEM_PROMPT
+            system_instruction=SYSTEM_PROMPT,
+            generation_config=generation_config,
+            safety_settings=safety_settings
         )
         
         # Build chat history
@@ -104,21 +139,23 @@ def chat():
                 'parts': [msg['content']]
             })
         
-        chat = model.start_chat(history=chat_history)
-        response = chat.send_message(user_message)
+        logger.info(f"Sending message to Gemini: {user_message[:50]}...")
+        chat_session = model.start_chat(history=chat_history)
+        response = chat_session.send_message(user_message)
         
         return jsonify({
             'response': response.text,
             'venue_data': VENUE_DATA
         })
     except Exception as e:
+        logger.error(f"Gemini API Error: {str(e)}")
         return jsonify({
             'response': f"I'm having trouble connecting right now. {get_demo_response(user_message)}",
             'venue_data': VENUE_DATA
-        })
+        }), 500
 
 
-def get_demo_response(message):
+def get_demo_response(message: str) -> str:
     """Smart demo responses when API key is not configured."""
     msg_lower = message.lower()
     
@@ -151,13 +188,14 @@ def get_demo_response(message):
 
 
 @app.route('/api/venue-data', methods=['GET'])
-def venue_data():
+def venue_data() -> Response:
     """Returns current venue data for the dashboard."""
     return jsonify(VENUE_DATA)
 
 
 @app.route('/api/health', methods=['GET'])
-def health():
+def health() -> Response:
+    """Health check endpoint for container orchestration readiness."""
     return jsonify({'status': 'healthy', 'service': 'ArenaIQ', 'version': '1.0.0'})
 
 

@@ -829,7 +829,7 @@
 <div class="app-shell">
 
   <!-- ── LEFT SIDEBAR ── -->
-  <aside class="sidebar">
+  <aside class="sidebar" aria-label="Venue Navigation Summary" role="complementary">
     <!-- Venue Map -->
     <div class="sidebar-section">
       <div class="section-title">Stadium Overview</div>
@@ -900,7 +900,7 @@
   </aside>
 
   <!-- ── CENTER CHAT ── -->
-  <main class="chat-area">
+  <main class="chat-area" role="main" aria-label="Chat Interface">
     <div class="chat-header">
       <div class="chat-hero">
         <div class="chat-hero-title">🏟️ Your AI Venue Assistant</div>
@@ -909,17 +909,17 @@
     </div>
 
     <!-- Quick prompts -->
-    <div class="quick-prompts">
-      <button class="quick-btn" onclick="sendQuick('Where is the least crowded section right now?')">📊 Crowd Status</button>
-      <button class="quick-btn" onclick="sendQuick('What food options have the shortest wait time?')">🍔 Food & Drinks</button>
-      <button class="quick-btn" onclick="sendQuick('Which gate should I use for fastest entry?')">🚪 Gate Entry</button>
-      <button class="quick-btn" onclick="sendQuick('Where is the nearest restroom with short wait?')">🚻 Restrooms</button>
-      <button class="quick-btn" onclick="sendQuick('What is happening now and what is next on the schedule?')">📅 Schedule</button>
-      <button class="quick-btn" onclick="sendQuick('Give me tips for the best experience today!')">💡 Pro Tips</button>
+    <div class="quick-prompts" aria-label="Quick question prompts" role="navigation">
+      <button class="quick-btn" onclick="sendQuick('Where is the least crowded section right now?')" aria-label="Ask about crowd status">📊 Crowd Status</button>
+      <button class="quick-btn" onclick="sendQuick('What food options have the shortest wait time?')" aria-label="Ask about food and drinks">🍔 Food & Drinks</button>
+      <button class="quick-btn" onclick="sendQuick('Which gate should I use for fastest entry?')" aria-label="Ask about gate entry">🚪 Gate Entry</button>
+      <button class="quick-btn" onclick="sendQuick('Where is the nearest restroom with short wait?')" aria-label="Ask about restrooms">🚻 Restrooms</button>
+      <button class="quick-btn" onclick="sendQuick('What is happening now and what is next on the schedule?')" aria-label="Ask about the schedule">📅 Schedule</button>
+      <button class="quick-btn" onclick="sendQuick('Give me tips for the best experience today!')" aria-label="Ask for pro tips">💡 Pro Tips</button>
     </div>
 
     <!-- Messages -->
-    <div class="messages-container" id="messages">
+    <div class="messages-container" id="messages" aria-live="polite" aria-atomic="false">
       <!-- Welcome message -->
       <div class="message ai" id="welcome-message">
         <div class="avatar ai">🤖</div>
@@ -936,17 +936,17 @@
     </div>
 
     <!-- Input -->
-    <div class="chat-input-area">
+    <div class="chat-input-area" role="search">
       <div class="input-wrapper">
-        <textarea id="chat-input" placeholder="Ask about crowds, wait times, directions, food..." rows="1"></textarea>
-        <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send message">➤</button>
+        <textarea id="chat-input" placeholder="Ask about crowds, wait times, directions, food..." rows="1" aria-label="Chat input field"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send message" aria-label="Send message">➤</button>
       </div>
       <div id="powered-by">Powered by Google Gemini 2.0 Flash · ArenaIQ v1.0</div>
     </div>
   </main>
 
   <!-- ── RIGHT PANEL ── -->
-  <aside class="right-panel">
+  <aside class="right-panel" aria-label="Real-time Venue Data" role="complementary">
     <!-- Overall Stats -->
     <div class="panel-section">
       <div class="section-title">📊 Venue Overview</div>
@@ -973,7 +973,7 @@
     <!-- Gate Status -->
     <div class="panel-section">
       <div class="section-title">🚪 Gate Status</div>
-      <div class="gate-list" id="gate-list">
+      <div class="gate-list" id="gate-list" role="list">
         <!-- Populated by JS -->
       </div>
     </div>
@@ -981,7 +981,7 @@
     <!-- Food Courts -->
     <div class="panel-section">
       <div class="section-title">🍔 Food & Drinks</div>
-      <div class="food-list" id="food-list">
+      <div class="food-list" id="food-list" role="list">
         <!-- Populated by JS -->
       </div>
     </div>
