@@ -5,11 +5,15 @@ from typing import Dict, Any, List
 from dotenv import load_dotenv
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from google.api_core import retry
 
 load_dotenv()  # loads .env file locally (ignored by git)
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 from flask_talisman import Talisman
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_caching import Cache
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,6 +26,18 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 # Add security headers, but allow inline scripts/styles for our single-page app
 # Disable force_https so local tests don't redirect (Render handles HTTPS organically)
 Talisman(app, content_security_policy=None, force_https=False)
+
+# Initialize Rate Limiter (Security)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+# Initialize Cache (Efficiency)
+cache = Cache(config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 15})
+cache.init_app(app)
 
 # Configure Gemini
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -90,6 +106,7 @@ def index() -> Response:
 
 
 @app.route('/api/chat', methods=['POST'])
+@limiter.limit("10 per minute") # Protect from abuse
 def chat() -> tuple[Response, int] | Response:
     """
     Handle chat requests from the frontend, process through Gemini AI,
@@ -141,7 +158,10 @@ def chat() -> tuple[Response, int] | Response:
         
         logger.info(f"Sending message to Gemini: {user_message[:50]}...")
         chat_session = model.start_chat(history=chat_history)
-        response = chat_session.send_message(user_message)
+        
+        # Robust API usage with Exponential Backoff
+        retry_policy = retry.Retry(initial=1.0, maximum=10.0, multiplier=2.0, deadline=30.0)
+        response = retry_policy(chat_session.send_message)(user_message)
         
         return jsonify({
             'response': response.text,
@@ -188,6 +208,7 @@ def get_demo_response(message: str) -> str:
 
 
 @app.route('/api/venue-data', methods=['GET'])
+@cache.cached(timeout=10) # Cache venue data to avoid server load
 def venue_data() -> Response:
     """Returns current venue data for the dashboard."""
     return jsonify(VENUE_DATA)
