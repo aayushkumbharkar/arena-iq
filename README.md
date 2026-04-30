@@ -4,7 +4,7 @@
 
 **Challenge 2 — Election Process Education · Google Antigravity × Hack2skill**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-blue?style=for-the-badge&logo=render)](https://arena-iq.onrender.com)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-blue?style=for-the-badge&logo=render)](https://electlq-iq.onrender.com)
 [![Tests](https://img.shields.io/badge/Tests-29%20Passed-brightgreen?style=for-the-badge)](#-testing)
 [![Coverage](https://img.shields.io/badge/Coverage-82%25-green?style=for-the-badge)](#-testing)
 [![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)](https://python.org)
@@ -144,7 +144,7 @@ pytest tests/ -v --cov=. --cov-report=term-missing
 ### Local Development
 
 ```bash
-git clone https://github.com/aayushkumbharkar/arena-iq.git
+git clone https://github.com/aayushkumbharkar/ElectlQ-iq.git
 cd arena-iq
 pip install -r requirements.txt
 
