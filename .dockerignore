@@ -1,0 +1,16 @@
+.git
+.env
+.env.local
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+tests/
+.coveragerc
+pytest.ini
+*.md
+.gitignore
+.dockerignore
+render.yaml
+.venv/
+venv/

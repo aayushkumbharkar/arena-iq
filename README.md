@@ -1,161 +1,199 @@
-# ArenaIQ — AI-Powered Smart Venue Assistant
+# ElectIQ — AI-Powered Election Process Education
 
-> 🏟️ Transforming the large-scale sporting event experience with real-time AI intelligence
+> 🗳️ Empowering citizens with AI-driven election literacy
 
-**Built for PromptWars Virtual Challenge 1 — Google Antigravity × Hack2skill**
+**Challenge 2 — Election Process Education · Google Antigravity × Hack2skill**
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-blue?style=for-the-badge&logo=render)](https://arena-iq.onrender.com)
+[![Tests](https://img.shields.io/badge/Tests-29%20Passed-brightgreen?style=for-the-badge)](#-testing)
+[![Coverage](https://img.shields.io/badge/Coverage-82%25-green?style=for-the-badge)](#-testing)
+[![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)](https://python.org)
 
 ---
 
-## 🎯 Problem Statement
+## 🎯 Chosen Vertical
 
-Large-scale sporting venues face critical attendee experience challenges:
-- **Crowd Bottlenecks**: Fans cluster in high-density zones without knowing alternatives exist
-- **Long Wait Times**: No real-time visibility into food court or restroom queues  
-- **Poor Navigation**: Attendees miss events while lost or stuck in queues
-- **Reactive Management**: Venue staff react to problems instead of preventing them
+**Election Process Education** — Building an intelligent assistant that helps citizens understand the entire democratic election process, from voter registration to government formation.
 
-## 💡 Solution: ArenaIQ
+## 💡 Approach and Logic
 
-ArenaIQ is an **intelligent venue assistant** powered by **Google Gemini 2.0 Flash** that provides:
+### Problem
+Democratic participation depends on informed citizens, yet election processes are complex and often poorly understood. First-time voters especially struggle with:
+- Understanding the end-to-end election process
+- Knowing how to register and what documents are needed
+- Understanding how their vote is secured and counted
+- Differentiating between election types and voting methods
+
+### Solution: ElectIQ
+ElectIQ is a **context-aware AI education platform** that uses **Google Gemini 2.0 Flash** to provide personalised election education through natural conversation. Instead of static content, users interact with an AI expert that adapts to their specific questions and knowledge level.
+
+**Key Design Decisions:**
+1. **Conversational AI over static content** — Users learn by asking questions naturally, powered by Gemini's understanding
+2. **Comprehensive knowledge base** — The AI has a structured election database injected as system context
+3. **Interactive learning** — AI-generated quizzes reinforce understanding
+4. **Non-partisan by design** — System prompt enforces neutrality and factual accuracy
+5. **Fallback architecture** — Full functionality without API key via intelligent demo responses
+
+## 🏗️ How the Solution Works
+
+### Architecture
+
+```
+┌───────────────────────────────────────────────┐
+│            ElectIQ Frontend (SPA)             │
+│  Election timeline · AI chat · Quiz engine    │
+│  Voter info panels · Accessibility features   │
+└──────────────────┬────────────────────────────┘
+                   │ REST API
+┌──────────────────▼────────────────────────────┐
+│          Flask Backend (Python)               │
+│  /api/chat — Gemini AI election expert        │
+│  /api/quiz — AI-generated quiz questions      │
+│  /api/election-data — Structured knowledge    │
+│  /api/health — Container health check         │
+│  Security · Caching · Rate Limiting           │
+└──────────────────┬────────────────────────────┘
+                   │
+┌──────────────────▼────────────────────────────┐
+│       Google Gemini 2.0 Flash                 │
+│  Context-aware election expert                │
+│  Quiz question generation                     │
+│  System prompt + knowledge base               │
+└───────────────────────────────────────────────┘
+```
+
+### Features
 
 | Feature | Description |
 |---------|-------------|
-| 🗺️ **Live Crowd Map** | Real-time density visualization across all venue sections |
-| ⏱️ **Wait Time Intelligence** | Accurate wait estimates for food courts, restrooms, and gates |
-| 🤖 **AI Chat Assistant** | Natural language queries powered by Gemini AI |
-| 🚨 **Proactive Alerts** | Smart notifications before problems escalate |
-| 📅 **Event Timeline** | Live event schedule with current status |
-| 🚪 **Gate Optimization** | Route attendees to fastest entry/exit points |
+| 🤖 **AI Chat** | Natural language election education powered by Gemini |
+| 🗳️ **Interactive Timeline** | Visual 7-step election process walkthrough |
+| 🧠 **Smart Quiz** | AI-generated quiz questions with explanations |
+| 📝 **Voter Guide** | Registration steps, eligibility, required documents |
+| 📊 **Voting Methods** | EVM, paper ballot, postal, VVPAT explained |
+| 🏛️ **Election Types** | National, state, local, by-elections, referendums |
+| ⚖️ **Voter Rights** | NOTA, accessible voting, right to information |
+| ◑ **Accessibility** | High contrast mode, keyboard nav, screen reader support |
 
-## 🏗️ Architecture
+### User Flow
+1. User lands on the dashboard with election timeline, chat, and info panels
+2. Quick prompt buttons let users jump to common topics instantly
+3. Chat with Gemini AI for in-depth, personalised election education
+4. Click timeline steps or info cards to explore specific topics
+5. Take the quiz to test and reinforce knowledge
 
+## 📋 Assumptions
+
+- The application focuses on democratic election processes generally, with examples from the Indian election system
+- Internet connectivity is required for Gemini AI features; demo mode works offline
+- Users are citizens seeking to understand election processes (first-time voters, students, educators)
+- The AI maintains strict non-partisan neutrality and redirects political questions
+
+## 🛡️ Google Services Integration
+
+| Service | Usage | Purpose |
+|---------|-------|---------|
+| **Google Gemini 2.0 Flash** | AI chat + quiz generation | Core intelligence for personalised education |
+| **Google Cloud Logging** | Structured logging | Production observability (auto-detects Cloud Run) |
+| **Google Fonts** | Inter + Space Grotesk | Premium typography |
+| **Google API Core** | Retry policies | Resilient API communication |
+
+## 🧪 Testing
+
+```bash
+# Run full test suite with coverage
+pytest tests/ -v --cov=. --cov-report=term-missing
+
+# Results: 29 tests passed, 82% coverage
 ```
-┌─────────────────────────────────────────────┐
-│              ArenaIQ Frontend                │
-│  Single-page app · Interactive SVG map       │
-│  Real-time panels · Gemini chat interface    │
-└──────────────────┬──────────────────────────┘
-                   │ HTTP/REST
-┌──────────────────▼──────────────────────────┐
-│           Flask Backend (Python)             │
-│  /api/chat — Gemini 2.0 Flash integration   │
-│  /api/venue-data — Live venue state          │
-│  Simulated real-time crowd data engine       │
-└──────────────────┬──────────────────────────┘
-                   │ API calls
-┌──────────────────▼──────────────────────────┐
-│         Google Gemini 2.0 Flash              │
-│  Context-aware venue assistant               │
-│  System prompt with live venue data          │
-└─────────────────────────────────────────────┘
-```
+
+**Test categories:**
+- Index route and health endpoint
+- Election data API structure and integrity
+- Chat input validation (empty, too long, XSS)
+- All 10 demo response branches
+- Quiz endpoint and question structure
+- Data integrity checks
+
+## ♿ Accessibility
+
+- **Skip navigation** link for keyboard users
+- **High contrast mode** toggle in header
+- **Visible focus rings** on all interactive elements
+- **ARIA live regions** for dynamic chat updates
+- **Keyboard navigation** throughout (Enter on timeline items, quiz)
+- **Semantic HTML5** (`<main>`, `<aside>`, `role` attributes)
+- **Reduced motion** media query support
+- **Screen reader** labels on all interactive elements
+
+## 🔒 Security
+
+- **Flask-Talisman** — HSTS, security headers
+- **Rate limiting** — 15 req/min on chat, 200/day default
+- **Input validation** — Max 500 chars, HTML escaping via MarkupSafe
+- **Non-root Docker** — Container runs as unprivileged user
+- **API key protection** — `.env` gitignored, `.env.example` template only
+- **Safety filters** — Gemini content safety settings enabled
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.12+
+- Python 3.10+
 - Google Gemini API Key ([Get one here](https://aistudio.google.com/))
 
 ### Local Development
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/aayushkumbharkar/arena-iq.git
 cd arena-iq
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Set your Gemini API key
-set GEMINI_API_KEY=your_api_key_here   # Windows
-# export GEMINI_API_KEY=your_api_key_here  # Linux/Mac
+# Set your API key
+echo GEMINI_API_KEY=your_key > .env   # or set as environment variable
 
-# Run the app
 python app.py
-
 # Visit http://localhost:8080
 ```
 
 ### Docker
 
 ```bash
-docker build -t arena-iq .
-docker run -p 8080:8080 -e GEMINI_API_KEY=your_key arena-iq
+docker build -t electiq .
+docker run -p 8080:8080 -e GEMINI_API_KEY=your_key electiq
 ```
-
-## ☁️ Google Cloud Run Deployment
-
-```bash
-# Set your project
-export PROJECT_ID=your-gcp-project-id
-
-# Build and push
-gcloud builds submit --tag gcr.io/$PROJECT_ID/arena-iq
-
-# Deploy to Cloud Run
-gcloud run deploy arena-iq \
-  --image gcr.io/$PROJECT_ID/arena-iq \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars GEMINI_API_KEY=your_api_key_here
-```
-
-## 🧠 AI Integration Details
-
-ArenaIQ uses **Google Gemini 2.0 Flash** with a context-rich system prompt that includes:
-
-- **Live venue state**: All 5 sections with crowd density, wait times, and capacity data
-- **Gate status**: Queue lengths and estimated entry times for all gates
-- **Amenity data**: Food court menus, wait times, and locations
-- **Event schedule**: Timeline with live/upcoming/completed states
-
-The AI provides:
-- Contextual navigation recommendations
-- Crowd-aware food suggestions
-- Optimal timing advice (e.g., "go get food during halftime before lines build up")
-- Safety and comfort guidance
-
-## 📊 Key Metrics Addressed
-
-| Challenge | ArenaIQ Solution |
-|-----------|-----------------|
-| Crowd congestion | Real-time density map + proactive section recommendations |
-| Long food queues | Live wait times + AI suggestions for shortest waits |
-| Gate bottlenecks | Queue lengths + estimated entry times per gate |
-| Navigation confusion | Interactive map + natural language directions |
-| Missing event content | Live timeline with status indicators |
-
-## 🛠️ Tech Stack
-
-- **Frontend**: Vanilla HTML/CSS/JS — interactive SVG maps, glassmorphism UI
-- **Backend**: Python Flask + Gunicorn
-- **AI**: Google Gemini 2.0 Flash (`google-generativeai`)
-- **Deployment**: Docker + Google Cloud Run
-- **Design**: Space Grotesk + Inter fonts, HSL-tuned color palette
 
 ## 📁 Project Structure
 
 ```
 arena-iq/
-├── app.py              # Flask backend + Gemini integration
+├── app.py              # Flask backend, routes, Gemini integration
+├── config.py           # Centralized environment-based configuration
 ├── requirements.txt    # Python dependencies
-├── Dockerfile          # Container definition for Cloud Run
-├── README.md           # This file
-└── static/
-    └── index.html      # Full frontend (SPA)
+├── Dockerfile          # Production container (non-root, health check)
+├── .dockerignore       # Docker build exclusions
+├── .env.example        # Environment variable template
+├── render.yaml         # Render.com deployment config
+├── pytest.ini          # Test configuration
+├── .coveragerc         # Coverage settings
+├── static/
+│   ├── index.html      # Semantic HTML structure
+│   ├── styles.css      # Design system (indigo/gold theme)
+│   └── app.js          # Frontend logic, chat, quiz engine
+└── tests/
+    ├── __init__.py
+    └── test_app.py     # 29 comprehensive tests
 ```
 
-## 🏆 Why ArenaIQ Wins
+## 🛠️ Tech Stack
 
-1. **Real Problem, Real Solution**: Addresses genuine pain points at sporting events
-2. **AI-Native Design**: Gemini is deeply integrated, not bolted on
-3. **Context-Aware Intelligence**: The AI has full venue state in every conversation
-4. **Production-Ready**: Docker + Cloud Run deployment from day one
-5. **Beautiful UX**: Dark mode, animated maps, real-time updates
-6. **Lightweight**: Well under 1MB total size
+- **Frontend**: HTML5 / CSS3 / Vanilla JS — semantic, accessible, responsive
+- **Backend**: Python Flask + Gunicorn
+- **AI**: Google Gemini 2.0 Flash (`google-generativeai`)
+- **Security**: Flask-Talisman, Flask-Limiter, MarkupSafe
+- **Performance**: Flask-Compress (gzip), Flask-Caching
+- **Logging**: Google Cloud Logging (production) / stdlib (local)
+- **Testing**: pytest + pytest-cov (82% coverage)
+- **Deployment**: Docker + Render.com
 
 ---
 
