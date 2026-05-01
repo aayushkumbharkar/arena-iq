@@ -5,8 +5,8 @@
 **Challenge 2 — Election Process Education · Google Antigravity × Hack2skill**
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-blue?style=for-the-badge&logo=render)](https://electlq-iq.onrender.com)
-[![Tests](https://img.shields.io/badge/Tests-29%20Passed-brightgreen?style=for-the-badge)](#-testing)
-[![Coverage](https://img.shields.io/badge/Coverage-82%25-green?style=for-the-badge)](#-testing)
+[![Tests](https://img.shields.io/badge/Tests-61%20Passed-brightgreen?style=for-the-badge)](#-testing)
+[![Coverage](https://img.shields.io/badge/Coverage-85%25-green?style=for-the-badge)](#-testing)
 [![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)](https://python.org)
 
 ---
@@ -94,6 +94,7 @@ ElectIQ is a **context-aware AI education platform** that uses **Google Gemini 2
 | Service | Usage | Purpose |
 |---------|-------|---------|
 | **Google Gemini 2.0 Flash** | AI chat + quiz generation | Core intelligence for personalised education |
+| **Google Cloud Translation** | Civic education in multiple languages | Real-time translation to Hindi, Spanish, French |
 | **Google Cloud Logging** | Structured logging | Production observability (auto-detects Cloud Run) |
 | **Google Fonts** | Inter + Space Grotesk | Premium typography |
 | **Google API Core** | Retry policies | Resilient API communication |
@@ -104,15 +105,16 @@ ElectIQ is a **context-aware AI education platform** that uses **Google Gemini 2
 # Run full test suite with coverage
 pytest tests/ -v --cov=. --cov-report=term-missing
 
-# Results: 29 tests passed, 82% coverage
+# Results: 61 tests passed, 85% coverage
 ```
 
 **Test categories:**
 - Index route and health endpoint
-- Election data API structure and integrity
+- Election data API structure, integrity, and ETag caching
 - Chat input validation (empty, too long, XSS)
 - All 10 demo response branches
-- Quiz endpoint and question structure
+- Quiz endpoint and count boundaries
+- Translation endpoint, boundaries, and fallbacks
 - Data integrity checks
 
 ## ♿ Accessibility

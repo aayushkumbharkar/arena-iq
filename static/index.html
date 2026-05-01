@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#4f46e5" />
   <title>ElectIQ — AI Election Process Education</title>
   <meta name="description" content="ElectIQ: AI-powered election process education platform. Learn about voting, registration, election security, and civic participation powered by Google Gemini." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,13 +17,20 @@
 <!-- HEADER -->
 <header>
   <div class="logo">
-    <div class="logo-icon">🗳️</div>
+    <div class="logo-icon" aria-hidden="true">🗳️</div>
     <div class="logo-text">Elect<span>IQ</span></div>
   </div>
   <div class="header-controls">
+    <label for="lang-select" class="sr-only">Select language</label>
+    <select id="lang-select" class="lang-select" onchange="changeLanguage(this.value)" aria-label="Select display language">
+      <option value="en">🌐 English</option>
+      <option value="hi">🇮🇳 हिन्दी</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="fr">🇫🇷 Français</option>
+    </select>
     <button class="hc-toggle" id="hc-btn" onclick="toggleContrast()" aria-label="Toggle high contrast mode">◑ High Contrast</button>
     <div class="badge-pill">
-      <span>🤖</span> Powered by Gemini
+      <span aria-hidden="true">🤖</span> Powered by Gemini
     </div>
   </div>
 </header>
@@ -42,7 +50,7 @@
     <div class="sidebar-section">
       <div class="section-title">💡 Did You Know?</div>
       <div class="fact-card">
-        <div class="fact-emoji">📖</div>
+        <div class="fact-emoji" aria-hidden="true">📖</div>
         <div class="fact-text" id="fact-text" aria-live="polite">Loading facts...</div>
       </div>
     </div>
@@ -64,7 +72,7 @@
       <button class="quick-btn" onclick="sendQuick('What are my rights as a voter?')" aria-label="Ask about voter rights">⚖️ My Rights</button>
     </div>
 
-    <div class="messages-container" id="messages" aria-live="polite" aria-atomic="false">
+    <div class="messages-container" id="messages" aria-live="polite" aria-atomic="false" aria-label="Chat messages">
       <div class="message ai" role="article">
         <div class="avatar ai" aria-hidden="true">🗳️</div>
         <div class="message-bubble">
@@ -80,12 +88,13 @@
       </div>
     </div>
 
-    <div class="chat-input-area" role="search">
+    <div class="chat-input-area">
       <div class="input-wrapper">
+        <label for="chat-input" class="sr-only">Type your election question</label>
         <textarea id="chat-input" placeholder="Ask about elections, voting, registration..." rows="1" aria-label="Type your election question" aria-describedby="powered-by"></textarea>
         <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send message" aria-label="Send message">➤</button>
       </div>
-      <div id="powered-by">Powered by Google Gemini 2.0 Flash · ElectIQ v1.0</div>
+      <div id="powered-by" aria-live="off">Powered by Google Gemini 2.0 Flash · ElectIQ v1.1</div>
     </div>
   </main>
 
@@ -118,8 +127,8 @@
 
     <div class="panel-section">
       <div class="section-title">🧠 Test Your Knowledge</div>
-      <div class="quiz-launcher" onclick="startQuiz()" tabindex="0" role="button" aria-label="Start election knowledge quiz" onkeydown="if(event.key==='Enter')startQuiz()">
-        <div class="quiz-launcher-emoji">🧠</div>
+      <div class="quiz-launcher" onclick="startQuiz()" tabindex="0" role="button" aria-label="Start election knowledge quiz" onkeydown="if(event.key==='Enter'||event.key===' ')startQuiz()">
+        <div class="quiz-launcher-emoji" aria-hidden="true">🧠</div>
         <div class="quiz-launcher-title">Election Quiz</div>
         <div class="quiz-launcher-sub">5 AI-generated questions · Test yourself!</div>
       </div>
@@ -129,13 +138,17 @@
 </div>
 
 <!-- QUIZ MODAL -->
-<div class="modal-overlay" id="quiz-modal" role="dialog" aria-modal="true" aria-label="Election Knowledge Quiz">
+<div class="modal-overlay" id="quiz-modal" role="alertdialog" aria-modal="true" aria-labelledby="quiz-modal-title" aria-describedby="quiz-modal-desc">
   <div class="modal" style="position:relative;">
-    <button class="modal-close" onclick="closeQuiz()" aria-label="Close quiz">&times;</button>
-    <div class="modal-title">🧠 Election Knowledge Quiz</div>
-    <div id="quiz-content"></div>
+    <button class="modal-close" id="modal-close-btn" onclick="closeQuiz()" aria-label="Close quiz">&times;</button>
+    <div class="modal-title" id="quiz-modal-title">🧠 Election Knowledge Quiz</div>
+    <p id="quiz-modal-desc" class="sr-only">Answer multiple choice questions about the democratic election process.</p>
+    <div id="quiz-content" aria-live="assertive" aria-atomic="true"></div>
   </div>
 </div>
+
+<!-- Screen-reader only announcement region -->
+<div id="sr-announce" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
 
 <script src="/static/app.js"></script>
 </body>

@@ -124,3 +124,11 @@ header { position: sticky; top: 0; z-index: 100; background: rgba(7,11,21,0.88);
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
 @media (max-width: 1024px) { .app-shell { grid-template-columns: 260px 1fr 240px; } }
 @media (max-width: 768px) { .app-shell { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; min-height: calc(100vh - 64px); } .sidebar, .right-panel { display: none; } }
+/* Screen reader only */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+/* Language selector */
+.lang-select { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 5px 10px; color: var(--text-secondary); font-size: 0.72rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; outline: none; }
+.lang-select:hover, .lang-select:focus { border-color: var(--accent-gold); color: var(--accent-gold); }
+.lang-select option { background: var(--bg-card); color: var(--text-primary); }
+/* Translation loading */
+.translating { opacity: 0.5; transition: opacity 0.3s; pointer-events: none; }

@@ -14,20 +14,40 @@ class Config:
 
     # Application
     APP_NAME: Final[str] = "ElectIQ"
-    APP_VERSION: Final[str] = "1.0.0"
+    APP_VERSION: Final[str] = "1.1.0"
     APP_DESCRIPTION: Final[str] = "AI-Powered Election Process Education"
 
     # Security
     SECRET_KEY: str = os.environ.get("SECRET_KEY", os.urandom(32).hex())
     MAX_MESSAGE_LENGTH: Final[int] = 500
     RATE_LIMIT_DEFAULT: Final[str] = "200 per day"
-    RATE_LIMIT_CHAT: Final[str] = "15 per minute"
+    RATE_LIMIT_CHAT: Final[str] = "20 per minute"
+    RATE_LIMIT_TRANSLATE: Final[str] = "30 per minute"
+
+    # Content Security Policy
+    CSP_DIRECTIVES: Final[dict] = {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": ["'self'", "https://fonts.googleapis.com"],
+        "font-src": ["'self'", "https://fonts.gstatic.com"],
+        "img-src": ["'self'", "data:"],
+        "connect-src": "'self'",
+        "frame-ancestors": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'self'",
+    }
 
     # Google Gemini AI
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
     GEMINI_MODEL: Final[str] = "gemini-2.0-flash"
     GEMINI_TEMPERATURE: Final[float] = 0.7
     GEMINI_MAX_TOKENS: Final[int] = 600
+
+    # Google Cloud Translation
+    TRANSLATE_API_KEY: str = os.environ.get("TRANSLATE_API_KEY", "")
+
+    # Chat
+    MAX_HISTORY_TURNS: Final[int] = 10
 
     # Server
     PORT: int = int(os.environ.get("PORT", 8080))

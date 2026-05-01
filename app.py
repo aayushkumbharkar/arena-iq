@@ -3,19 +3,24 @@ ElectIQ — AI-Powered Election Process Education Platform
 
 A Flask web application that educates citizens about the democratic
 election process using Google Gemini AI. Features an interactive chat
-assistant, election process timeline, voter guides, and AI-generated quizzes.
+assistant, election process timeline, voter guides, AI-generated quizzes,
+and multilingual support via Google Cloud Translation.
 
 Google Services Used:
     - Google Gemini 2.0 Flash (AI chat + quiz generation)
     - Google Cloud Logging (structured logging, auto-detected on Cloud Run)
+    - Google Cloud Translation v2 (multilingual civic education)
     - Google Fonts (Inter + Space Grotesk)
+    - Google API Core (retry policies)
 """
 
 import os
 import json
 import logging
+import hashlib
 from typing import Dict, Any, List
 
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -34,6 +39,11 @@ from flask_compress import Compress
 from markupsafe import escape
 
 from config import get_config
+
+# ────────────────────────────────────────────────────────────
+#  Public API
+# ────────────────────────────────────────────────────────────
+__all__ = ["app", "ELECTION_DATA", "QUIZ_BANK", "get_demo_response"]
 
 # ────────────────────────────────────────────────────────────
 #  Logging — Google Cloud Logging if available, else stdlib
@@ -64,9 +74,12 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 Talisman(
     app,
-    content_security_policy=None,
+    content_security_policy=config.CSP_DIRECTIVES,
     force_https=False,
     strict_transport_security=True,
+    x_content_type_options=True,
+    x_xss_protection=True,
+    referrer_policy="strict-origin-when-cross-origin",
 )
 
 limiter = Limiter(
@@ -219,8 +232,13 @@ ELECTION_DATA: Dict[str, Any] = {
     ],
 }
 
+# Pre-compute ETag for election data (efficiency)
+_ELECTION_DATA_ETAG: str = hashlib.md5(
+    json.dumps(ELECTION_DATA, sort_keys=True).encode()
+).hexdigest()
+
 # ────────────────────────────────────────────────────────────
-#  Gemini System Prompt
+#  Gemini System Prompt (pre-built at module load)
 # ────────────────────────────────────────────────────────────
 SYSTEM_PROMPT: str = (
     "You are ElectIQ, an AI election process education assistant. "
@@ -259,7 +277,10 @@ def get_demo_response(message: str) -> str:
         )
 
     if any(w in msg for w in ["process", "steps", "how does", "procedure"]):
-        lines = [f"{s['icon']} **Step {s['step']}: {s['title']}** — {s['description']}" for s in ELECTION_DATA["process_steps"]]
+        lines = [
+            f"{s['icon']} **Step {s['step']}: {s['title']}** — {s['description']}"
+            for s in ELECTION_DATA["process_steps"]
+        ]
         return "🗳️ **The Election Process:**\n\n" + "\n\n".join(lines) + "\n\nAsk about any step for more detail!"
 
     if any(w in msg for w in ["secure", "security", "safe", "fraud", "tamper", "hack"]):
@@ -279,7 +300,10 @@ def get_demo_response(message: str) -> str:
         return "🗳️ **Voting Methods:**\n\n" + "\n\n".join(lines) + "\n\nAsk about any method for details!"
 
     if any(w in msg for w in ["type", "kinds", "general", "national", "state", "local"]):
-        lines = [f"{t['icon']} **{t['name']}** ({t['frequency']}) — {t['description']}" for t in ELECTION_DATA["election_types"]]
+        lines = [
+            f"{t['icon']} **{t['name']}** ({t['frequency']}) — {t['description']}"
+            for t in ELECTION_DATA["election_types"]
+        ]
         return "🏛️ **Types of Elections:**\n\n" + "\n\n".join(lines)
 
     if any(w in msg for w in ["right", "nota", "accessible"]):
@@ -345,6 +369,36 @@ QUIZ_BANK: List[Dict[str, Any]] = [
     {"question": "What is a by-election?", "options": ["Annual election", "Election to fill a vacant seat", "Presidential election", "Party internal election"], "correct": 1, "explanation": "By-elections fill seats vacated by death, resignation, or disqualification."},
 ]
 
+# ────────────────────────────────────────────────────────────
+#  Google Cloud Translation helper
+# ────────────────────────────────────────────────────────────
+_SUPPORTED_LANGS = {"hi": "Hindi", "es": "Spanish", "fr": "French", "en": "English"}
+_TRANSLATE_URL = "https://translation.googleapis.com/language/translate/v2"
+
+
+def _translate_texts(texts: List[str], target: str) -> List[str]:
+    """
+    Translate a list of strings using Google Cloud Translation REST API.
+    Returns original texts unchanged if API key is absent or request fails.
+    """
+    api_key = config.TRANSLATE_API_KEY
+    if not api_key or target == "en":
+        return texts
+
+    try:
+        resp = requests.post(
+            _TRANSLATE_URL,
+            params={"key": api_key},
+            json={"q": texts, "target": target, "format": "text"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return [item["translatedText"] for item in data["data"]["translations"]]
+    except Exception as exc:
+        logger.warning("Translation failed: %s", exc)
+        return texts
+
 
 # ────────────────────────────────────────────────────────────
 #  Routes
@@ -376,6 +430,10 @@ def chat() -> tuple[Response, int] | Response:
     if len(user_message) > config.MAX_MESSAGE_LENGTH:
         return jsonify({"error": f"Message too long (max {config.MAX_MESSAGE_LENGTH} chars)"}), 400
 
+    # Validate history entries
+    if not isinstance(history, list):
+        history = []
+
     # Sanitise input
     user_message = str(escape(user_message))
 
@@ -405,7 +463,8 @@ def chat() -> tuple[Response, int] | Response:
 
         chat_history = [
             {"role": m["role"], "parts": [m["content"]]}
-            for m in history[-10:]
+            for m in history[-config.MAX_HISTORY_TURNS:]
+            if isinstance(m, dict) and "role" in m and "content" in m
         ]
 
         session = model.start_chat(history=chat_history)
@@ -431,7 +490,7 @@ def quiz() -> Response:
     Attempts to generate fresh questions via Gemini; falls back to
     the built-in quiz bank if the API is unavailable.
     """
-    count = min(int(request.args.get("count", 5)), 8)
+    count = min(max(int(request.args.get("count", 5)), 1), 8)
 
     if GEMINI_API_KEY:
         try:
@@ -456,10 +515,51 @@ def quiz() -> Response:
 
 
 @app.route("/api/election-data", methods=["GET"])
-@cache.cached(timeout=30)
+@cache.cached(timeout=300)
 def election_data() -> Response:
     """Return the election education dataset for frontend panels."""
-    return jsonify(ELECTION_DATA)
+    # Support conditional GET with ETag
+    if request.headers.get("If-None-Match") == _ELECTION_DATA_ETAG:
+        return Response(status=304)
+    response = jsonify(ELECTION_DATA)
+    response.headers["ETag"] = _ELECTION_DATA_ETAG
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return response
+
+
+@app.route("/api/translate", methods=["POST"])
+@limiter.limit(config.RATE_LIMIT_TRANSLATE)
+def translate() -> tuple[Response, int] | Response:
+    """
+    Translate election content using Google Cloud Translation API.
+
+    Accepts JSON with 'texts' (list of strings) and 'target' (language code).
+    Supported targets: hi (Hindi), es (Spanish), fr (French), en (English).
+    Falls back to original text if Translation API key is not configured.
+    """
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    texts: List[str] = data.get("texts", [])
+    target: str = data.get("target", "en").lower().strip()
+
+    if not texts or not isinstance(texts, list):
+        return jsonify({"error": "No texts provided"}), 400
+
+    if target not in _SUPPORTED_LANGS:
+        return jsonify({"error": f"Unsupported language. Choose from: {list(_SUPPORTED_LANGS.keys())}"}), 400
+
+    if len(texts) > 50:
+        return jsonify({"error": "Too many texts (max 50)"}), 400
+
+    # Validate each text
+    texts = [str(t)[:500] for t in texts if isinstance(t, str)]
+
+    translated = _translate_texts(texts, target)
+    return jsonify({
+        "translations": translated,
+        "target": target,
+        "language": _SUPPORTED_LANGS[target],
+        "source": "google_translate" if config.TRANSLATE_API_KEY and target != "en" else "passthrough",
+    })
 
 
 @app.route("/api/health", methods=["GET"])
@@ -469,6 +569,7 @@ def health() -> Response:
         "status": "healthy",
         "service": config.APP_NAME,
         "version": config.APP_VERSION,
+        "google_services": ["gemini", "cloud_logging", "cloud_translation", "fonts"],
     })
 
 
